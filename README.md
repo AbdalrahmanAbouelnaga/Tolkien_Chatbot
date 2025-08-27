@@ -19,6 +19,6 @@ then launch streamlit_HF.py:
 streamlit run streamlit_HF.py
 ```
 ## TODO
-1) clean up the repo structure and file name
+1) clean up the repo structure and file names
 2) clean up the code and split it to more files to make more understandable and managable
 3) test prompt, RAG Process, Embedding Model, and LLM to find out how to improve the Chatbot
