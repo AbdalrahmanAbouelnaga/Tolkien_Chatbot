@@ -1,3 +1,5 @@
+DATA_PATH: ./data/books
+CHROMA_PATH: ./chroma
 system_prompt: |
                   ### **Structured Prompt for a Tolkien Lore RAG Chatbot**
 

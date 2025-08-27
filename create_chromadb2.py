@@ -7,7 +7,9 @@ from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_ollama.embeddings import OllamaEmbeddings
-import json
+from utils.pdf_utils import find_and_load_chapters_from_book,get_book_chapters_using_json
+
+
 warnings.filterwarnings("ignore", category=FutureWarning)
 load_dotenv()
 
@@ -16,57 +18,13 @@ text_splitter = RecursiveCharacterTextSplitter(chunk_size=4096, chunk_overlap=51
 final_docs = []
 DATA_PATH = "./data/books"
 CHROMA_PATH = "./chroma"
-### --- The Hobbit ---
-hobbit_path = os.path.join(DATA_PATH, "The Hobbit.pdf")
-hobbit_loader = PyPDFLoader(hobbit_path)
-hobbit_docs = hobbit_loader.load()
-hobbit_chunks = text_splitter.split_documents(hobbit_docs)
-
-hobbit_chapter_number = "Unknown"
-hobbit_chapter_name = "Unknown"
-hobbit_book_name = "The Hobbit"
-
-for doc in hobbit_chunks:
-    text = doc.page_content
-    lines = text.splitlines()
-
-    chapter_number = "Unknown"
-    chapter_name = "Unknown"
-
-    for i, line in enumerate(lines):
-        clean = line.strip()
-        match = re.match(r"(?i)^chapter\s+([ivxlcdm\d]+)", clean)
-        if match:
-            chapter_number = f"Chapter {match.group(1).upper()}"
-            for j in range(i + 1, min(i + 6, len(lines))):
-                next_line = lines[j].strip()
-                if next_line and not next_line.lower().startswith("chapter"):
-                    chapter_name = next_line.title() if next_line.isupper() else next_line
-                    break
-            hobbit_chapter_number = chapter_number
-            hobbit_chapter_name = chapter_name
-            break
-
-    if chapter_number == "Unknown":
-        chapter_number = hobbit_chapter_number
-        chapter_name = hobbit_chapter_name
-
-    final_docs.append(Document(
-        page_content=text,
-        metadata={
-            "book_name": hobbit_book_name,
-            "chapter_number": chapter_number,
-            "chapter_name": chapter_name
-        }
-    ))
-
-print("✅ The Hobbit Done")
 
 ### --- The Lord of the Rings ---
 lotr_path = os.path.join(DATA_PATH, "The Lord of the Rings.pdf")
 lotr_loader = PyPDFLoader(lotr_path)
 lotr_docs = lotr_loader.load()
 lotr_chunks = text_splitter.split_documents(lotr_docs)
+final_docs.extend(find_and_load_chapters_from_book(text_splitter=text_splitter,book_name="The Hobbit"))
 
 book_sections = {
     "THE FELLOWSHIP OF THE RING": "The Fellowship of the Ring",
@@ -179,26 +137,7 @@ for doc in lotr_chunks:
 
 print("✅ The Trilogy Done")
 
-with open("book_chapters.json", 'r') as file:
-        data_dictionary = json.load(file)
-
-for book_title in data_dictionary.keys():
-    chapters = data_dictionary[book_title]
-    path = os.path.join(DATA_PATH, book_title)
-    loader = PyPDFLoader(path)
-    docs = loader.load()
-    for chapter in chapters.keys():
-        chapter_docs = docs[chapters[chapter][0]:chapters[chapter][1]]
-        chuncks = text_splitter.split_documents(chapter_docs)
-        for doc in chuncks:
-                final_docs.append(Document(
-                page_content=doc.page_content,
-                metadata={
-                    "book_name": book_title.replace(".pdf",""),
-                    "chapter_name": chapter
-                }
-            ))
-    print(f"✅ {book_title.replace(".pdf","")} Done")
+final_docs.extend(get_book_chapters_using_json("book_chapters.json",text_splitter))
 
 
 # nomic-embed-text or mxbai-embed-large
